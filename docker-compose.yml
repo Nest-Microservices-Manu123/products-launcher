@@ -2,11 +2,13 @@ services:
 
   nats-server:
     image: nats:latest
+    container_name: nats-server
     ports:
       - "8222:8222"
 
   client-gateway:
     build: ./client-gateway
+    container_name: client-gateway
     ports:
       - ${CLIENT_GATEWAY_PORT}:3000
     volumes:
@@ -18,8 +20,7 @@ services:
 
   products-service:
     build: ./products
-    ports:
-      - "3001:3001"
+    container_name: products-service
     volumes:
       - ./products/src:/usr/src/app/src
     command: npm run start:dev
@@ -30,10 +31,9 @@ services:
 
   orders-service:
     build: ./orders
+    container_name: orders-service
     depends_on:
       - orders-db
-    ports:
-      - "3002:3002"
     volumes:
       - ./orders/src:/usr/src/app/src
     command: npm run start:dev
@@ -42,8 +42,24 @@ services:
       - NATS_SERVICES=nats://nats-server:4222
       - DATABASE_URL=postgresql://order_user:order_password@orders-db:5432/orders?schema=public
 
+  payments-service:
+    build: ./payments
+    container_name: payments-service
+    ports:
+      - ${PAYMENT_PORT}:3003
+    volumes:
+      - ./payments/src:/usr/src/app/src
+    command: npm run start:dev
+    environment:
+      - PORT=${PAYMENT_PORT}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - STRIPE_SUCCESS_URL=${STRIPE_SUCCESS_URL}
+      - STRIPE_CANCEL_URL=${STRIPE_CANCEL_URL}
+
   orders-db:
     image: postgres:16.2
+    container_name: orders-db
     environment:
       - POSTGRES_USER=order_user
       - POSTGRES_PASSWORD=order_password
